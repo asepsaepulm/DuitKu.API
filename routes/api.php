@@ -38,6 +38,11 @@ Route::post('/login', [
     'login'
 ]);
 
+Route::post('/login/google', [
+    AuthController::class,
+    'googleLogin'
+]);
+
 /*
 |--------------------------------------------------------------------------
 | PROTECTED ROUTES

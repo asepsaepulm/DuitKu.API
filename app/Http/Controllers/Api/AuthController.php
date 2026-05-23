@@ -75,6 +75,85 @@ class AuthController extends Controller
     }
 
     /**
+     * GOOGLE LOGIN
+     */
+    public function googleLogin(Request $request)
+    {
+        $validated = $request->validate([
+            'id_token' => 'required|string',
+        ]);
+
+        $idToken = $validated['id_token'];
+
+        // Verifikasi token ke Google API
+        $response = \Illuminate\Support\Facades\Http::get("https://oauth2.googleapis.com/tokeninfo?id_token={$idToken}");
+
+        if ($response->failed() || isset($response['error'])) {
+            return response()->json([
+                'message' => 'Token Google tidak valid atau kedaluwarsa',
+                'error' => $response->json() ?? 'Gagal menghubungi server Google',
+            ], 400);
+        }
+
+        $payload = $response->json();
+
+        // Ambil data dari payload Google
+        $email = $payload['email'] ?? null;
+        $name = $payload['name'] ?? 'User';
+        $avatar = $payload['picture'] ?? null;
+        $providerId = $payload['sub'] ?? null; // ID Unik User Google
+
+        if (!$email || !$providerId) {
+            return response()->json([
+                'message' => 'Gagal mengambil email atau provider ID dari akun Google'
+            ], 400);
+        }
+
+        // Cari user berdasarkan provider_id atau email
+        $user = User::where('provider', 'google')
+            ->where('provider_id', $providerId)
+            ->first();
+
+        if (!$user) {
+            // Jika provider_id belum ada, cek apakah ada user dengan email yang sama
+            $user = User::where('email', $email)->first();
+
+            if ($user) {
+                // Hubungkan user lama dengan Google
+                $user->update([
+                    'provider' => 'google',
+                    'provider_id' => $providerId,
+                    'avatar' => $avatar ?? $user->avatar,
+                ]);
+            } else {
+                // Buat user baru
+                $user = User::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => bcrypt(\Illuminate\Support\Str::random(24)),
+                    'avatar' => $avatar,
+                    'provider' => 'google',
+                    'provider_id' => $providerId,
+                ]);
+            }
+        } else {
+            // Update foto profil terbaru jika ada perubahan
+            if ($avatar && $user->avatar !== $avatar) {
+                $user->update(['avatar' => $avatar]);
+            }
+        }
+
+        // Buat token Sanctum
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login Google sukses',
+            'token' => $token,
+            'user' => $user,
+        ]);
+    }
+
+    /**
      * PROFILE
      */
     public function profile(Request $request)
