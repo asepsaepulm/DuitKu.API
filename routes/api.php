@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\SavingsGoalController;
 use App\Http\Controllers\Api\RecurringTransactionController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\WalletMemberController;
+use App\Http\Controllers\Api\InsightController;
 
 /*
 |--------------------------------------------------------------------------
@@ -210,5 +211,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/export', [
         ExportController::class,
         'export'
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | INSIGHTS (Analisis Keuangan Otomatis)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/insights', [
+        InsightController::class,
+        'index'
     ]);
 });
