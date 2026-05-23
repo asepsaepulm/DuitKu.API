@@ -11,13 +11,73 @@ class TransactionController extends Controller
 {
     public function index(Request $request)
     {
-        $transactions = Transaction::with([
+        $query = Transaction::with([
             'wallet',
             'category'
         ])
-        ->where('user_id', $request->user()->id)
-        ->latest()
-        ->get();
+        ->where('user_id', $request->user()->id);
+
+        // Filter berdasarkan tipe transaksi
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter berdasarkan kategori
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        // Filter berdasarkan wallet
+        if ($request->filled('wallet_id')) {
+            $query->where('wallet_id', $request->wallet_id);
+        }
+
+        // Filter berdasarkan tanggal mulai
+        if ($request->filled('start_date')) {
+            $query->where(
+                'transaction_date',
+                '>=',
+                $request->start_date
+            );
+        }
+
+        // Filter berdasarkan tanggal akhir
+        if ($request->filled('end_date')) {
+            $query->where(
+                'transaction_date',
+                '<=',
+                $request->end_date
+            );
+        }
+
+        // Pencarian berdasarkan catatan
+        if ($request->filled('search')) {
+            $query->where(
+                'note',
+                'ilike',
+                '%' . $request->search . '%'
+            );
+        }
+
+        // Sorting (default: terbaru)
+        $sortBy = $request->query('sort_by', 'transaction_date');
+        $sortOrder = $request->query('sort_order', 'desc');
+
+        $allowedSorts = [
+            'transaction_date',
+            'amount',
+            'created_at'
+        ];
+
+        if (in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->latest('transaction_date');
+        }
+
+        // Pagination (default 20 per halaman)
+        $perPage = $request->query('per_page', 20);
+        $transactions = $query->paginate($perPage);
 
         return response()->json($transactions);
     }
@@ -59,7 +119,7 @@ class TransactionController extends Controller
 
         return response()->json([
             'message' => 'Transaction created',
-            'data' => $transaction
+            'data' => $transaction->load(['wallet', 'category'])
         ], 201);
     }
 
@@ -101,11 +161,34 @@ class TransactionController extends Controller
             'transaction_date' => 'sometimes|date',
         ]);
 
+        // Jika amount berubah, update balance wallet
+        if (isset($validated['amount'])) {
+            $wallet = $transaction->wallet;
+            $oldAmount = $transaction->amount;
+            $newAmount = $validated['amount'];
+
+            // Rollback balance lama
+            if ($transaction->type === 'income') {
+                $wallet->balance -= $oldAmount;
+            } else {
+                $wallet->balance += $oldAmount;
+            }
+
+            // Apply balance baru
+            if ($transaction->type === 'income') {
+                $wallet->balance += $newAmount;
+            } else {
+                $wallet->balance -= $newAmount;
+            }
+
+            $wallet->save();
+        }
+
         $transaction->update($validated);
 
         return response()->json([
             'message' => 'Transaction updated',
-            'data' => $transaction
+            'data' => $transaction->load(['wallet', 'category'])
         ]);
     }
 

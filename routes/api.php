@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\StatisticsController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SavingsGoalController;
 use App\Http\Controllers\Api\RecurringTransactionController;
+use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\WalletMemberController;
 
 /*
 |--------------------------------------------------------------------------
@@ -80,6 +82,32 @@ Route::middleware('auth:sanctum')->group(function () {
         'wallets',
         WalletController::class
     );
+
+    /*
+    |--------------------------------------------------------------------------
+    | WALLET MEMBERS (Shared Wallet / Kolaborasi)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/wallets/{wallet}/members', [
+        WalletMemberController::class,
+        'index'
+    ]);
+
+    Route::post('/wallets/{wallet}/members', [
+        WalletMemberController::class,
+        'store'
+    ]);
+
+    Route::delete('/wallets/{wallet}/members/{member}', [
+        WalletMemberController::class,
+        'destroy'
+    ]);
+
+    Route::get('/wallets/{wallet}/activity', [
+        WalletMemberController::class,
+        'activity'
+    ]);
 
     /*
     |--------------------------------------------------------------------------
@@ -171,5 +199,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/statistics/category', [
         StatisticsController::class,
         'category'
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | EXPORT
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/export', [
+        ExportController::class,
+        'export'
     ]);
 });
