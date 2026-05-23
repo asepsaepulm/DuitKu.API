@@ -27,6 +27,12 @@ class AuthController extends Controller
             'password' => bcrypt($validated['password']),
         ]);
 
+        $user->wallets()->create([
+            'name' => 'Dompet Utama',
+            'type' => 'cash',
+            'balance' => 0,
+        ]);
+
         $token = $user->createToken('auth_token')
             ->plainTextToken;
 
@@ -134,6 +140,12 @@ class AuthController extends Controller
                     'avatar' => $avatar,
                     'provider' => 'google',
                     'provider_id' => $providerId,
+                ]);
+
+                $user->wallets()->create([
+                    'name' => 'Dompet Utama',
+                    'type' => 'cash',
+                    'balance' => 0,
                 ]);
             }
         } else {
